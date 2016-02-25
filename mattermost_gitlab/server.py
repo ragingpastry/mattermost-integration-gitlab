@@ -37,13 +37,17 @@ def new_event():
     if request.json is None:
         print('Invalid Content-Type')
         return 'Content-Type must be application/json and the request body must contain valid JSON', 400
+    elif 'webhook_url' not in request.args:
+        print('Webhook URL not set')
+        return 'Webhook URL must be set'
 
     try:
         event = event_formatter.as_event(request.json)
+        webhook_url = request.args['webhook_url']
 
         if event.should_report_event(app.config['REPORT_EVENTS']):
             text = event.format()
-            post_text(text)
+            post_text(text, webhook_url)
     except Exception:
         import traceback
         traceback.print_exc()
@@ -60,13 +64,17 @@ def new_ci_event():
     if request.json is None:
         print('Invalid Content-Type')
         return 'Content-Type must be application/json and the request body must contain valid JSON', 400
+    elif 'webhook_url' not in request.args:
+        print('Webhok URL not set')
+        return 'Webhook URL must be set'
 
     try:
         event = event_formatter.CIEvent(request.json)
+        webhook_url = request.args['webhook_url']
 
         if event.should_report_event(app.config['REPORT_EVENTS']):
             text = event.format()
-            post_text(text)
+            post_text(text, webhook_url)
     except Exception:
         import traceback
         traceback.print_exc()
@@ -74,7 +82,7 @@ def new_ci_event():
     return 'OK'
 
 
-def post_text(text):
+def post_text(text, webhook_url):
     """
     Mattermost POST method, posts text to the Mattermost incoming webhook URL
     """
@@ -88,8 +96,9 @@ def post_text(text):
     if app.config['CHANNEL']:
         data['channel'] = app.config['CHANNEL']
 
+    mattermost_webhook_url = app.config['MATTERMOST_URL'] + '/hooks/' + webhook_url
     headers = {'Content-Type': 'application/json'}
-    resp = requests.post(app.config['MATTERMOST_WEBHOOK_URL'], headers=headers, data=json.dumps(data))
+    resp = requests.post(mattermost_webhook_url, headers=headers, data=json.dumps(data))
 
     if resp.status_code is not requests.codes.ok:
         print('Encountered error posting to Mattermost URL %s, status=%d, response_body=%s' % (app.config['MATTERMOST_WEBHOOK_URL'], resp.status_code, resp.json()))
@@ -97,7 +106,7 @@ def post_text(text):
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('MATTERMOST_WEBHOOK_URL', help='The Mattermost webhook URL you created')
+    parser.add_argument('MATTERMOST_URL', help='The Mattermost URL')
 
     server_options = parser.add_argument_group("Server")
     server_options.add_argument('-p', '--port', type=int, default=5000)
