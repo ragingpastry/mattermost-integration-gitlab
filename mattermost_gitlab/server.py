@@ -96,7 +96,11 @@ def post_text(text, webhook_url):
     if app.config['CHANNEL']:
         data['channel'] = app.config['CHANNEL']
 
-    mattermost_webhook_url = app.config['MATTERMOST_URL'] + '/hooks/' + webhook_url
+    if (app.config['MATTERMOST_URL']).endswith('/'):
+        mattermost_webhook_url = app.config['MATTERMOST_URL'] + 'hooks/' + webhook_url
+    else:
+        mattermost_webhook_url = app.config['MATTERMOST_URL'] + '/hooks/' + webhook_url
+
     headers = {'Content-Type': 'application/json'}
     resp = requests.post(mattermost_webhook_url, headers=headers, data=json.dumps(data))
 
