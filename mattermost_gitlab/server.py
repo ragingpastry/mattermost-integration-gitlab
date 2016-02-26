@@ -96,9 +96,11 @@ def post_text(text, mattermost_webhook_url):
     if app.config['CHANNEL']:
         data['channel'] = app.config['CHANNEL']
 
-
     headers = {'Content-Type': 'application/json'}
-    resp = requests.post(mattermost_webhook_url, headers=headers, data=json.dumps(data))
+    if app.config['VERIFY_SSL'].lower() == 'false':
+        resp = requests.post(mattermost_webhook_url, headers=headers, data=json.dumps(data), verify=False)
+    else:
+        resp = requests.post(mattermost_webhook_url, headers=headers, data=json.dumps(data), verify=True)
 
     if resp.status_code is not requests.codes.ok:
         print('Encountered error posting to Mattermost URL %s, status=%d, response_body=%s' % (app.config['MATTERMOST_WEBHOOK_URL'], resp.status_code, resp.json()))
@@ -109,6 +111,7 @@ def parse_args(args=None):
     server_options = parser.add_argument_group("Server")
     server_options.add_argument('-p', '--port', type=int, default=5000)
     server_options.add_argument('--host', default='0.0.0.0')
+    server_options.add_argument('--verify-ssl', dest='VERIFY_SSL', default=True)
 
     parser.add_argument('-u', '--username', dest='USERNAME', default='gitlab')
     parser.add_argument('--channel', dest='CHANNEL', default='')  # Leave this blank to post to the default channel of your webhook
