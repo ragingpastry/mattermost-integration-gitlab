@@ -43,7 +43,7 @@ def new_event():
 
     try:
         event = event_formatter.as_event(request.json)
-        webhook_url = request.args['webhook_url']
+        webhook_url = request.args['webhook_url'].split('/')[:1]
 
         if event.should_report_event(app.config['REPORT_EVENTS']):
             text = event.format()
@@ -82,7 +82,7 @@ def new_ci_event():
     return 'OK'
 
 
-def post_text(text, webhook_url):
+def post_text(text, mattermost_webhook_url):
     """
     Mattermost POST method, posts text to the Mattermost incoming webhook URL
     """
@@ -96,10 +96,6 @@ def post_text(text, webhook_url):
     if app.config['CHANNEL']:
         data['channel'] = app.config['CHANNEL']
 
-    if (app.config['MATTERMOST_URL']).endswith('/'):
-        mattermost_webhook_url = app.config['MATTERMOST_URL'] + 'hooks/' + webhook_url
-    else:
-        mattermost_webhook_url = app.config['MATTERMOST_URL'] + '/hooks/' + webhook_url
 
     headers = {'Content-Type': 'application/json'}
     resp = requests.post(mattermost_webhook_url, headers=headers, data=json.dumps(data))
@@ -110,8 +106,6 @@ def post_text(text, webhook_url):
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('MATTERMOST_URL', help='The Mattermost URL')
-
     server_options = parser.add_argument_group("Server")
     server_options.add_argument('-p', '--port', type=int, default=5000)
     server_options.add_argument('--host', default='0.0.0.0')
